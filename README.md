@@ -2,7 +2,7 @@
 
 AI-powered pathfinding visualization for Mars rover navigation.
 
-## 🚀 Live Demo
+##  Live Demo
 [Play with the simulator here!](https://apparlim.github.io/mars-rover-pathfinding/)
 
 ## Features
