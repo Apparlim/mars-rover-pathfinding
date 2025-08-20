@@ -5,6 +5,10 @@ AI-powered pathfinding visualization for Mars rover navigation.
 ##  Live Demo
 [Play with the simulator here!](https://apparlim.github.io/mars-rover-pathfinding/)
 
+## Screenshot
+<img width="931" height="399" alt="{F302E01F-352B-445D-96A2-434E51B4C37C}" src="https://github.com/user-attachments/assets/8eb2a724-5b99-414a-8c48-d7c469e6caaf" />
+
+
 ## Features
 - Multiple pathfinding algorithms (A*, Dijkstra, Greedy)
 - Dynamic Mars terrain generation
