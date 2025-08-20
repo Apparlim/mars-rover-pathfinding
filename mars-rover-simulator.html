@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars Rover AI Pathfinding</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a0505 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Header with glow effect */
+        .header {
+            text-align: center;
+            padding: 30px;
+            background: rgba(0,0,0,0.5);
+            border-bottom: 2px solid #ff6b35;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,107,53,0.1) 0%, transparent 70%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: #ff6b35;
+            text-shadow: 0 0 20px rgba(255,107,53,0.5);
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .subtitle {
+            color: #aaa;
+            font-size: 1.1em;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Main container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            gap: 20px;
+        }
+
+        /* Control panels */
+        .panel {
+            background: rgba(20,20,30,0.9);
+            border: 1px solid #333;
+            border-radius: 10px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .panel h2 {
+            color: #ff6b35;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            border-bottom: 2px solid #ff6b35;
+            padding-bottom: 10px;
+        }
+
+        /* Canvas container */
+        .canvas-container {
+            background: rgba(10,10,20,0.9);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        canvas {
+            border: 2px solid #ff6b35;
+            border-radius: 5px;
+            display: block;
+            margin: 0 auto;
+            cursor: crosshair;
+            background: #000;
+        }
+
+        /* Buttons */
+        button {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            background: linear-gradient(135deg, #ff6b35 0%, #f03a17 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.2);
+            transition: left 0.3s ease;
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255,107,53,0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #333;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        /* Select dropdown */
+        select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            background: #1a1a2e;
+            color: white;
+            border: 1px solid #ff6b35;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        /* Info displays */
+        .info-item {
+            padding: 10px;
+            margin: 8px 0;
+            background: rgba(255,107,53,0.1);
+            border-left: 3px solid #ff6b35;
+            border-radius: 3px;
+        }
+
+        .info-label {
+            color: #aaa;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            color: #fff;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+
+        /* Status indicator */
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            animation: statusPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes statusPulse {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 1; }
+        }
+
+        .status.ready {
+            background: rgba(76,175,80,0.2);
+            border: 1px solid #4caf50;
+            color: #4caf50;
+        }
+
+        .status.running {
+            background: rgba(255,193,7,0.2);
+            border: 1px solid #ffc107;
+            color: #ffc107;
+        }
+
+        .status.complete {
+            background: rgba(33,150,243,0.2);
+            border: 1px solid #2196f3;
+            color: #2196f3;
+        }
+
+        /* Legend */
+        .legend {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            border-radius: 3px;
+            border: 1px solid #333;
+        }
+
+        /* Loading animation */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto;
+            border: 4px solid rgba(255,107,53,0.3);
+            border-top: 4px solid #ff6b35;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive design */
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .panel {
+                max-width: 800px;
+                margin: 0 auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Mars Rover AI Pathfinding</h1>
+        <p class="subtitle">Advanced Search Algorithms for Autonomous Navigation</p>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>Mission Control</h2>
+            
+            <select id="algorithm">
+                <option value="astar">A* Search (Optimal)</option>
+                <option value="dijkstra">Dijkstra (Guaranteed)</option>
+                <option value="greedy">Greedy (Fast)</option>
+                <option value="bidirectional">Bidirectional A*</option>
+            </select>
+
+            <select id="terrain">
+                <option value="crater">Crater Field</option>
+                <option value="canyon">Canyon System</option>
+                <option value="dunes">Sand Dunes</option>
+                <option value="rocky">Rocky Terrain</option>
+                <option value="custom">Custom Map</option>
+            </select>
+
+            <button id="generateBtn">Generate Terrain</button>
+            <button id="findPathBtn">Find Path</button>
+            <button id="clearBtn">Clear Path</button>
+            <button id="animateBtn" disabled>Animate Rover</button>
+
+            <div class="status ready" id="status">
+                Ready for Mission
+            </div>
+
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4caf50;"></div>
+                    <span>Start</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f44336;"></div>
+                    <span>Goal</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #333;"></div>
+                    <span>Obstacle</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #654321;"></div>
+                    <span>Rough Terrain</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #2196f3;"></div>
+                    <span>Path</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ffc107;"></div>
+                    <span>Explored</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="marsCanvas" width="800" height="600"></canvas>
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Calculating optimal path...</p>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Mission Statistics</h2>
+            
+            <div class="info-item">
+                <div class="info-label">Path Length</div>
+                <div class="info-value" id="pathLength">-</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Path Cost</div>
+                <div class="info-value" id="pathCost">-</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Nodes Explored</div>
+                <div class="info-value" id="nodesExplored">-</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Computation Time</div>
+                <div class="info-value" id="computeTime">-</div>
+            </div>
+
+            <div class="info-item">
+                <div class="info-label">Efficiency Score</div>
+                <div class="info-value" id="efficiency">-</div>
+            </div>
+
+            <h2 style="margin-top: 30px;">Instructions</h2>
+            <p style="color: #aaa; font-size: 0.9em; line-height: 1.6;">
+                1. Select terrain type<br>
+                2. Click "Generate Terrain"<br>
+                3. Click on map to set start (green)<br>
+                4. Click again to set goal (red)<br>
+                5. Choose algorithm<br>
+                6. Click "Find Path" to navigate<br>
+                7. Watch the rover find its way!
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById('marsCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Grid settings
+        const GRID_SIZE = 40;
+        const CELL_SIZE = canvas.width / GRID_SIZE;
+        
+        // Terrain types
+        const TERRAIN = {
+            EMPTY: 0,
+            OBSTACLE: 1,
+            ROUGH: 2,
+            SAND: 3
+        };
+        
+        // Colors for visualization
+        const COLORS = {
+            EMPTY: '#8b4513',
+            OBSTACLE: '#333',
+            ROUGH: '#654321',
+            SAND: '#d2691e',
+            START: '#4caf50',
+            GOAL: '#f44336',
+            PATH: '#2196f3',
+            EXPLORED: 'rgba(255, 193, 7, 0.3)',
+            CURRENT: '#ff6b35',
+            GRID: 'rgba(255, 255, 255, 0.1)'
+        };
+        
+        // Game state
+        let grid = [];
+        let start = null;
+        let goal = null;
+        let path = [];
+        let explored = [];
+        let isAnimating = false;
+        let clickCount = 0;
+        
+        // Initialize grid
+        function initGrid() {
+            grid = [];
+            for (let i = 0; i < GRID_SIZE; i++) {
+                grid[i] = [];
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    grid[i][j] = TERRAIN.EMPTY;
+                }
+            }
+        }
+        
+        // Generate terrain based on type
+        function generateTerrain(type) {
+            initGrid();
+            
+            switch(type) {
+                case 'crater':
+                    generateCraters();
+                    break;
+                case 'canyon':
+                    generateCanyon();
+                    break;
+                case 'dunes':
+                    generateDunes();
+                    break;
+                case 'rocky':
+                    generateRocky();
+                    break;
+                default:
+                    generateRandom();
+            }
+            
+            // Reset points
+            start = null;
+            goal = null;
+            path = [];
+            explored = [];
+            clickCount = 0;
+            
+            render();
+        }
+        
+        // Generate crater field
+        function generateCraters() {
+            const numCraters = 8;
+            for (let n = 0; n < numCraters; n++) {
+                const cx = Math.floor(Math.random() * GRID_SIZE);
+                const cy = Math.floor(Math.random() * GRID_SIZE);
+                const radius = 2 + Math.floor(Math.random() * 4);
+                
+                for (let i = 0; i < GRID_SIZE; i++) {
+                    for (let j = 0; j < GRID_SIZE; j++) {
+                        const dist = Math.sqrt((i - cx) ** 2 + (j - cy) ** 2);
+                        if (dist < radius) {
+                            grid[i][j] = TERRAIN.OBSTACLE;
+                        } else if (dist < radius + 2) {
+                            grid[i][j] = TERRAIN.ROUGH;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Generate canyon
+        function generateCanyon() {
+            // Main canyon
+            const startY = Math.floor(GRID_SIZE * 0.3);
+            const endY = Math.floor(GRID_SIZE * 0.7);
+            
+            for (let i = startY; i < endY; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (j !== 10 && j !== 25) { // Gaps for crossing
+                        grid[i][j] = TERRAIN.OBSTACLE;
+                    }
+                }
+            }
+            
+            // Rough terrain around canyon
+            for (let i = startY - 2; i < endY + 2; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    if (grid[i] && grid[i][j] === TERRAIN.EMPTY) {
+                        grid[i][j] = TERRAIN.ROUGH;
+                    }
+                }
+            }
+        }
+        
+        // Generate sand dunes
+        function generateDunes() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const wave = Math.sin(i * 0.3) * Math.cos(j * 0.3);
+                    if (wave > 0.5) {
+                        grid[i][j] = TERRAIN.SAND;
+                    } else if (wave > 0.3) {
+                        grid[i][j] = TERRAIN.ROUGH;
+                    }
+                }
+            }
+        }
+        
+        // Generate rocky terrain
+        function generateRocky() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const rand = Math.random();
+                    if (rand < 0.15) {
+                        grid[i][j] = TERRAIN.OBSTACLE;
+                    } else if (rand < 0.35) {
+                        grid[i][j] = TERRAIN.ROUGH;
+                    }
+                }
+            }
+        }
+        
+        // Generate random terrain
+        function generateRandom() {
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const rand = Math.random();
+                    if (rand < 0.1) {
+                        grid[i][j] = TERRAIN.OBSTACLE;
+                    } else if (rand < 0.2) {
+                        grid[i][j] = TERRAIN.ROUGH;
+                    }
+                }
+            }
+        }
+        
+        // Render the grid
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid cells
+            for (let i = 0; i < GRID_SIZE; i++) {
+                for (let j = 0; j < GRID_SIZE; j++) {
+                    const x = j * CELL_SIZE;
+                    const y = i * CELL_SIZE;
+                    
+                    // Cell color based on terrain
+                    switch(grid[i][j]) {
+                        case TERRAIN.OBSTACLE:
+                            ctx.fillStyle = COLORS.OBSTACLE;
+                            break;
+                        case TERRAIN.ROUGH:
+                            ctx.fillStyle = COLORS.ROUGH;
+                            break;
+                        case TERRAIN.SAND:
+                            ctx.fillStyle = COLORS.SAND;
+                            break;
+                        default:
+                            ctx.fillStyle = COLORS.EMPTY;
+                    }
+                    
+                    ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                }
+            }
+            
+            // Draw explored cells
+            ctx.fillStyle = COLORS.EXPLORED;
+            for (const cell of explored) {
+                const x = cell.j * CELL_SIZE;
+                const y = cell.i * CELL_SIZE;
+                ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+            }
+            
+            // Draw path
+            if (path.length > 0) {
+                ctx.strokeStyle = COLORS.PATH;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(path[0].j * CELL_SIZE + CELL_SIZE/2, 
+                          path[0].i * CELL_SIZE + CELL_SIZE/2);
+                for (let i = 1; i < path.length; i++) {
+                    ctx.lineTo(path[i].j * CELL_SIZE + CELL_SIZE/2,
+                              path[i].i * CELL_SIZE + CELL_SIZE/2);
+                }
+                ctx.stroke();
+            }
+            
+            // Draw grid lines
+            ctx.strokeStyle = COLORS.GRID;
+            ctx.lineWidth = 0.5;
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(canvas.width, i * CELL_SIZE);
+                ctx.stroke();
+            }
+            
+            // Draw start point
+            if (start) {
+                ctx.fillStyle = COLORS.START;
+                ctx.beginPath();
+                ctx.arc(start.j * CELL_SIZE + CELL_SIZE/2,
+                       start.i * CELL_SIZE + CELL_SIZE/2,
+                       CELL_SIZE/3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // Draw goal point
+            if (goal) {
+                ctx.fillStyle = COLORS.GOAL;
+                ctx.beginPath();
+                ctx.arc(goal.j * CELL_SIZE + CELL_SIZE/2,
+                       goal.i * CELL_SIZE + CELL_SIZE/2,
+                       CELL_SIZE/3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Handle canvas clicks
+        canvas.addEventListener('click', (e) => {
+            if (isAnimating) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            const j = Math.floor(x / CELL_SIZE);
+            const i = Math.floor(y / CELL_SIZE);
+            
+            if (grid[i][j] === TERRAIN.OBSTACLE) {
+                alert('Cannot place on obstacle!');
+                return;
+            }
+            
+            if (clickCount === 0) {
+                start = {i, j};
+                clickCount = 1;
+                updateStatus('Place goal position', 'ready');
+            } else if (clickCount === 1) {
+                goal = {i, j};
+                clickCount = 2;
+                updateStatus('Ready to find path', 'ready');
+                document.getElementById('findPathBtn').disabled = false;
+            } else {
+                // Reset
+                start = {i, j};
+                goal = null;
+                path = [];
+                explored = [];
+                clickCount = 1;
+                updateStatus('Place goal position', 'ready');
+                document.getElementById('findPathBtn').disabled = true;
+            }
+            
+            render();
+        });
+        
+        // A* pathfinding algorithm
+        function findPath(algorithm) {
+            if (!start || !goal) return null;
+            
+            const startTime = performance.now();
+            explored = [];
+            
+            // cost function based on terrain
+            const getCost = (i, j) => {
+                switch(grid[i][j]) {
+                    case TERRAIN.ROUGH: return 3;
+                    case TERRAIN.SAND: return 2;
+                    default: return 1;
+                }
+            };
+            
+            // heuristic function
+            const heuristic = (a, b) => {
+                if (algorithm === 'dijkstra') return 0;
+                return Math.abs(a.i - b.i) + Math.abs(a.j - b.j);
+            };
+            
+            // neighbors function
+            const getNeighbors = (node) => {
+                const neighbors = [];
+                const dirs = [[0,1], [1,0], [0,-1], [-1,0], [1,1], [-1,-1], [1,-1], [-1,1]];
+                
+                for (const [di, dj] of dirs) {
+                    const ni = node.i + di;
+                    const nj = node.j + dj;
+                    
+                    if (ni >= 0 && ni < GRID_SIZE && nj >= 0 && nj < GRID_SIZE &&
+                        grid[ni][nj] !== TERRAIN.OBSTACLE) {
+                        neighbors.push({i: ni, j: nj});
+                    }
+                }
+                
+                return neighbors;
+            };
+            
+            // Priority queue implementation
+            class PriorityQueue {
+                constructor() {
+                    this.items = [];
+                }
+                
+                enqueue(item, priority) {
+                    this.items.push({item, priority});
+                    this.items.sort((a, b) => a.priority - b.priority);
+                }
+                
+                dequeue() {
+                    return this.items.shift().item;
+                }
+                
+                isEmpty() {
+                    return this.items.length === 0;
+                }
+            }
+            
+            // A* search
+            const openSet = new PriorityQueue();
+            const cameFrom = new Map();
+            const gScore = new Map();
+            const fScore = new Map();
+            
+            const startKey = `${start.i},${start.j}`;
+            gScore.set(startKey, 0);
+            fScore.set(startKey, heuristic(start, goal));
+            openSet.enqueue(start, fScore.get(startKey));
+            
+            while (!openSet.isEmpty()) {
+                const current = openSet.dequeue();
+                const currentKey = `${current.i},${current.j}`;
+                
+                explored.push(current);
+                
+                if (current.i === goal.i && current.j === goal.j) {
+                    // Reconstruct path
+                    const path = [];
+                    let node = current;
+                    while (node) {
+                        path.unshift(node);
+                        const key = `${node.i},${node.j}`;
+                        node = cameFrom.get(key);
+                    }
+                    
+                    const endTime = performance.now();
+                    updateStats(path, explored.length, endTime - startTime);
+                    return path;
+                }
+                
+                for (const neighbor of getNeighbors(current)) {
+                    const neighborKey = `${neighbor.i},${neighbor.j}`;
+                    const tentativeGScore = gScore.get(currentKey) + getCost(neighbor.i, neighbor.j);
+                    
+                    if (!gScore.has(neighborKey) || tentativeGScore < gScore.get(neighborKey)) {
+                        cameFrom.set(neighborKey, current);
+                        gScore.set(neighborKey, tentativeGScore);
+                        fScore.set(neighborKey, tentativeGScore + heuristic(neighbor, goal));
+                        openSet.enqueue(neighbor, fScore.get(neighborKey));
+                    }
+                }
+            }
+            
+            const endTime = performance.now();
+            updateStats(null, explored.length, endTime - startTime);
+            return null;
+        }
+        
+        // Update status
+        function updateStatus(text, type) {
+            const status = document.getElementById('status');
+            status.textContent = text;
+            status.className = `status ${type}`;
+        }
+        
+        // Update statistics
+        function updateStats(path, nodesExplored, time) {
+            if (path) {
+                document.getElementById('pathLength').textContent = path.length;
+                
+                let cost = 0;
+                for (const node of path) {
+                    switch(grid[node.i][node.j]) {
+                        case TERRAIN.ROUGH: cost += 3; break;
+                        case TERRAIN.SAND: cost += 2; break;
+                        default: cost += 1;
+                    }
+                }
+                document.getElementById('pathCost').textContent = cost.toFixed(1);
+                
+                const efficiency = ((path.length / nodesExplored) * 100).toFixed(1);
+                document.getElementById('efficiency').textContent = `${efficiency}%`;
+            } else {
+                document.getElementById('pathLength').textContent = 'No path';
+                document.getElementById('pathCost').textContent = '-';
+                document.getElementById('efficiency').textContent = '-';
+            }
+            
+            document.getElementById('nodesExplored').textContent = nodesExplored;
+            document.getElementById('computeTime').textContent = `${time.toFixed(2)}ms`;
+        }
+        
+        // Animate rover
+        function animateRover() {
+            if (!path || path.length === 0) return;
+            
+            isAnimating = true;
+            document.getElementById('animateBtn').disabled = true;
+            updateStatus('Rover in motion...', 'running');
+            
+            let currentIndex = 0;
+            
+            const animate = () => {
+                render();
+                
+                if (currentIndex < path.length) {
+                    // Draw rover
+                    ctx.fillStyle = COLORS.CURRENT;
+                    ctx.beginPath();
+                    ctx.arc(path[currentIndex].j * CELL_SIZE + CELL_SIZE/2,
+                           path[currentIndex].i * CELL_SIZE + CELL_SIZE/2,
+                           CELL_SIZE/2.5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    currentIndex++;
+                    setTimeout(animate, 100);
+                } else {
+                    isAnimating = false;
+                    document.getElementById('animateBtn').disabled = false;
+                    updateStatus('Mission complete!', 'complete');
+                }
+            };
+            
+            animate();
+        }
+        
+        // Event listeners
+        document.getElementById('generateBtn').addEventListener('click', () => {
+            const terrain = document.getElementById('terrain').value;
+            generateTerrain(terrain);
+            updateStatus('Click to place start position', 'ready');
+            document.getElementById('findPathBtn').disabled = true;
+            document.getElementById('animateBtn').disabled = true;
+        });
+        
+        document.getElementById('findPathBtn').addEventListener('click', () => {
+            if (!start || !goal) {
+                alert('Please set start and goal positions!');
+                return;
+            }
+            
+            const algorithm = document.getElementById('algorithm').value;
+            updateStatus('Computing path...', 'running');
+            document.getElementById('loading').classList.add('active');
+            
+                            setTimeout(() => {
+                path = findPath(algorithm);
+                explored.forEach((_, i) => {
+                    setTimeout(() => {
+                        render();
+                    }, i * 5);
+                });
+                
+                document.getElementById('loading').classList.remove('active');
+                
+                if (path) {
+                    updateStatus('Path found!', 'complete');
+                    document.getElementById('animateBtn').disabled = false;
+                } else {
+                    updateStatus('No path exists', 'ready');
+                }
+            }, 100);
+        });
+        
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            path = [];
+            explored = [];
+            render();
+            updateStatus('Path cleared', 'ready');
+            document.getElementById('animateBtn').disabled = true;
+            
+            // Reset stats
+            document.getElementById('pathLength').textContent = '-';
+            document.getElementById('pathCost').textContent = '-';
+            document.getElementById('nodesExplored').textContent = '-';
+            document.getElementById('computeTime').textContent = '-';
+            document.getElementById('efficiency').textContent = '-';
+        });
+        
+        document.getElementById('animateBtn').addEventListener('click', animateRover);
+        
+        // Initialize on load
+        window.addEventListener('load', () => {
+            generateTerrain('crater');
+            updateStatus('Click to place start position', 'ready');
+        });
+    </script>
+</body>
+</html>
+                
+                

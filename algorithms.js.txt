@@ -1,0 +1,129 @@
+/**
+* Advanced Pathfinding Algorithms Module
+* Clean, optimized implementations
+*/
+
+class PathfindingAlgorithms {
+constructor(grid, gridSize) {
+this.grid = grid;
+this.gridSize = gridSize;
+}
+
+// Get movement cost based on terrain
+getTerrainCost(i, j) {
+const terrain = this.grid[i][j];
+switch(terrain) {
+case 2: return 3; // rough terrain
+case 3: return 2; // sand
+default: return 1; // normal
+}
+}
+
+// Get valid neighbors
+getNeighbors(node) {
+const neighbors = [];
+const moves = [
+[0,1], [1,0], [0,-1], [-1,0], // cardinal
+[1,1], [-1,-1], [1,-1], [-1,1] // diagonal
+];
+
+for (const [di, dj] of moves) {
+const ni = node.i + di;
+const nj = node.j + dj;
+
+// Check bounds and obstacles
+if (ni >= 0 && ni < this.gridSize &&
+nj >= 0 && nj < this.gridSize &&
+this.grid[ni][nj] !== 1) { // not obstacle
+neighbors.push({i: ni, j: nj});
+}
+}
+return neighbors;
+}
+
+// Manhattan distance heuristic
+manhattanDistance(a, b) {
+return Math.abs(a.i - b.i) + Math.abs(a.j - b.j);
+}
+
+// Euclidean distance heuristic
+euclideanDistance(a, b) {
+return Math.sqrt((a.i - b.i)**2 + (a.j - b.j)**2);
+}
+
+// A* Search - optimal pathfinding
+astar(start, goal) {
+const openSet = new PriorityQueue();
+const cameFrom = new Map();
+const gScore = new Map();
+const fScore = new Map();
+const explored = [];
+
+const startKey = `${start.i},${start.j}`;
+gScore.set(startKey, 0);
+fScore.set(startKey, this.manhattanDistance(start, goal));
+openSet.enqueue(start, fScore.get(startKey));
+
+while (!openSet.isEmpty()) {
+const current = openSet.dequeue();
+const currentKey = `${current.i},${current.j}`;
+explored.push(current);
+
+// Found goal
+if (current.i === goal.i && current.j === goal.j) {
+return this.reconstructPath(cameFrom, current);
+}
+
+// Check all neighbors
+for (const neighbor of this.getNeighbors(current)) {
+const neighborKey = `${neighbor.i},${neighbor.j}`;
+const tentativeG = gScore.get(currentKey) +
+this.getTerrainCost(neighbor.i, neighbor.j);
+
+if (!gScore.has(neighborKey) || tentativeG < gScore.get(neighborKey)) {
+cameFrom.set(neighborKey, current);
+gScore.set(neighborKey, tentativeG);
+fScore.set(neighborKey, tentativeG +
+this.manhattanDistance(neighbor, goal));
+openSet.enqueue(neighbor, fScore.get(neighborKey));
+}
+}
+}
+
+return null; // no path found
+}
+
+// Reconstruct path from came_from map
+reconstructPath(cameFrom, current) {
+const path = [];
+let node = current;
+
+while (node) {
+path.unshift(node);
+const key = `${node.i},${node.j}`;
+node = cameFrom.get(key);
+}
+
+return path;
+}
+}
+
+// Priority Queue for A*
+class PriorityQueue {
+constructor() {
+this.items = [];
+}
+
+enqueue(item, priority) {
+this.items.push({item, priority});
+this.items.sort((a, b) => a.priority - b.priority);
+}
+
+dequeue() {
+return this.items.shift().item;
+}
+
+isEmpty() {
+return this.items.length === 0;
+}
+}
